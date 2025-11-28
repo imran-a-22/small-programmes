@@ -1,1 +1,1 @@
-Portfolio of coding projects - ranging from simple to advanced
+Repo for small programs to show as my personal, private portfolio of work. I want to learn intensely and improve rapidly to become a real developer that can rely on his own brain for monetisation of my knowledge. The Github repo uploads are good practice for understanding how to use this platform as the industry is reliant on this for functionality. Then, what even is industry, as software is everywhere.
