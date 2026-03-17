@@ -1,0 +1,108 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+  color: #222;
+}
+
+.container {
+  max-width: 700px;
+  margin: 40px auto;
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+h1,
+h2 {
+  text-align: center;
+}
+
+.expense-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.expense-form input,
+.expense-form select,
+.expense-form button,
+.filter-box select {
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.expense-form button {
+  background: #222;
+  color: white;
+  cursor: pointer;
+  border: none;
+}
+
+.expense-form button:hover {
+  background: #444;
+}
+
+.summary {
+  margin-bottom: 20px;
+}
+
+.filter-box {
+  margin-bottom: 20px;
+}
+
+.expense-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.expense-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: #fafafa;
+}
+
+.expense-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.expense-name {
+  font-weight: bold;
+}
+
+.expense-category {
+  font-size: 14px;
+  color: #666;
+}
+
+.expense-amount {
+  font-weight: bold;
+}
+
+.delete-btn {
+  background: crimson;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: darkred;
+}
