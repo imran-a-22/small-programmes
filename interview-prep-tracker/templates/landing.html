@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+    <h2>Practice smarter, not harder.</h2>
+    <p>Track interview questions, confidence, and spaced review sessions in one place.</p>
+    <div class="actions">
+        <a class="btn" href="{{ url_for('register') }}">Create account</a>
+        <a class="btn alt" href="{{ url_for('login') }}">Sign in</a>
+    </div>
+</section>
+{% endblock %}

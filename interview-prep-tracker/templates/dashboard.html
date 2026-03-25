@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Dashboard</h2>
+<section class="stats">
+    <article class="card stat"><h3>Total cards</h3><p>{{ totals.total or 0 }}</p></article>
+    <article class="card stat"><h3>Due today</h3><p>{{ totals.due or 0 }}</p></article>
+    <article class="card stat"><h3>Avg confidence</h3><p>{{ totals.avg_confidence or 0 }}</p></article>
+</section>
+
+<section class="card">
+    <h3>Cards by tag</h3>
+    {% if by_tag %}
+    <ul>
+        {% for row in by_tag %}
+        <li><strong>{{ row.tag }}</strong>: {{ row.count }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No cards yet. <a href="{{ url_for('create_card') }}">Add your first card</a>.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<form class="card form" method="post">
+    <h2>{% if mode == 'create' %}Create{% else %}Edit{% endif %} Card</h2>
+    <label>Title <input name="title" required value="{{ card.title if card else '' }}" /></label>
+    <label>Tag <input name="tag" required value="{{ card.tag if card else '' }}" /></label>
+    <label>Prompt <textarea name="prompt" required>{{ card.prompt if card else '' }}</textarea></label>
+    <label>Answer <textarea name="answer" required>{{ card.answer if card else '' }}</textarea></label>
+    <label>Confidence
+        <select name="confidence" required>
+            {% for num in range(1,6) %}
+                <option value="{{ num }}" {% if card and card.confidence == num %}selected{% elif not card and num == 3 %}selected{% endif %}>{{ num }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <button type="submit">Save card</button>
+</form>
+{% endblock %}

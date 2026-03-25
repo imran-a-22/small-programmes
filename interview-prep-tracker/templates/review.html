@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Today's Review Queue</h2>
+{% for card in cards %}
+<article class="card">
+    <h3>{{ card.title }} <small>({{ card.tag }})</small></h3>
+    <p><strong>Prompt:</strong> {{ card.prompt }}</p>
+    <details>
+        <summary>Reveal answer</summary>
+        <p>{{ card.answer }}</p>
+    </details>
+
+    <form class="row" method="post">
+        <input type="hidden" name="card_id" value="{{ card.id }}" />
+        <label>How confident were you?
+            <select name="confidence">
+                {% for num in range(1,6) %}
+                    <option value="{{ num }}" {% if card.confidence == num %}selected{% endif %}>{{ num }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit">Save review</button>
+    </form>
+</article>
+{% else %}
+<p class="card">No cards due today 🎉</p>
+{% endfor %}
+{% endblock %}
