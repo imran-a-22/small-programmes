@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>grammar_galaxy_defender</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b1020;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 16px 0 8px;
+      font-size: 28px;
+    }
+
+    p {
+      margin: 4px 0;
+      text-align: center;
+      max-width: 760px;
+    }
+
+    #gameWrap {
+      margin-top: 14px;
+      position: relative;
+    }
+
+    canvas {
+      border: 2px solid #ffffff22;
+      background: linear-gradient(#0b1020, #111935);
+      display: block;
+    }
+
+    #hud {
+      width: 800px;
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0 6px;
+      font-size: 18px;
+    }
+
+    #questionBox {
+      width: 800px;
+      min-height: 96px;
+      background: #161f3f;
+      border: 1px solid #ffffff22;
+      border-radius: 10px;
+      padding: 14px;
+      box-sizing: border-box;
+      margin-bottom: 8px;
+    }
+
+    #questionText {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .answers {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #263566;
+      color: white;
+      border: 1px solid #ffffff22;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background: #314784;
+    }
+
+    #message {
+      height: 24px;
+      margin: 8px 0 18px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Grammar Galaxy Defender</h1>
+  <p>Answer grammar questions to fire lasers and protect your ship.</p>
+  <p>Pick the correct answer button. Correct answers destroy enemies. Wrong answers cost health.</p>
+
+  <div id="hud">
+    <div>Score: <span id="score">0</span></div>
+    <div>Wave: <span id="wave">1</span></div>
+    <div>Health: <span id="health">5</span></div>
+  </div>
+
+  <div id="questionBox">
+    <div id="questionText">Press Start to begin.</div>
+    <div class="answers">
+      <button id="aBtn">A</button>
+      <button id="bBtn">B</button>
+      <button id="cBtn">C</button>
+      <button id="startBtn">Start Game</button>
+    </div>
+  </div>
+
+  <div id="gameWrap">
+    <canvas id="gameCanvas" width="800" height="420"></canvas>
+  </div>
+
+  <div id="message"></div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const scoreEl = document.getElementById("score");
+    const waveEl = document.getElementById("wave");
+    const healthEl = document.getElementById("health");
+    const questionTextEl = document.getElementById("questionText");
+    const messageEl = document.getElementById("message");
+
+    const aBtn = document.getElementById("aBtn");
+    const bBtn = document.getElementById("bBtn");
+    const cBtn = document.getElementById("cBtn");
+    const startBtn = document.getElementById("startBtn");
+
+    const questions = [
+      {
+        prompt: "Choose the correct sentence:",
+        options: ["She go to school every day.", "She goes to school every day.", "She going to school every day."],
+        correct: 1
+      },
+      {
+        prompt: "Choose the correct word: 'They ___ playing football.'",
+        options: ["is", "am", "are"],
+        correct: 2
+      },
+      {
+        prompt: "Choose the correct sentence:",
+        options: ["I have eaten breakfast.", "I has eaten breakfast.", "I eating breakfast."],
+        correct: 0
+      },
+      {
+        prompt: "Pick the correct past tense of 'teach':",
+        options: ["teached", "taught", "teachen"],
+        correct: 1
+      },
+      {
+        prompt: "Choose the correct article: 'It was ___ honest mistake.'",
+        options: ["a", "an", "the"],
+        correct: 1
+      },
+      {
+        prompt: "Which sentence uses punctuation correctly?",
+        options: ["Lets eat, grandma!", "Let's eat, grandma!", "Let's eat grandma!"],
+        correct: 1
+      },
+      {
+        prompt: "Choose the correct word: 'The dog wagged ___ tail.'",
+        options: ["its", "it's", "it is"],
+        correct: 0
+      },
+      {
+        prompt: "Choose the correct sentence:",
+        options: ["There are fewer cars today.", "There are less cars today.", "There is fewer cars today."],
+        correct: 0
+      },
+      {
+        prompt: "Choose the correct pronoun: 'This present is for Sarah and ___.'",
+        options: ["I", "me", "mine"],
+        correct: 1
+      },
+      {
+        prompt: "Choose the sentence with correct capitalization:",
+        options: ["we visited london in july.", "We visited London in July.", "We visited london in July."],
+        correct: 1
+      }
+    ];
+
+    let score = 0;
+    let health = 5;
+    let wave = 1;
+    let gameRunning = false;
+    let currentQuestion = null;
+    let stars = [];
+    let bullets = [];
+    let enemies = [];
+    let enemySpeed = 1.2;
+
+    const player = {
+      x: 80,
+      y: 210,
+      width: 42,
+      height: 24
+    };
+
+    function resetGame() {
+      score = 0;
+      health = 5;
+      wave = 1;
+      enemySpeed = 1.2;
+      bullets = [];
+      enemies = [];
+      stars = [];
+      for (let i = 0; i < 70; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: Math.random() * 2 + 0.5
+        });
+      }
+      spawnWave();
+      updateHud();
+      nextQuestion();
+      messageEl.textContent = "";
+      gameRunning = true;
+    }
+
+    function spawnWave() {
+      enemies = [];
+      const count = 3 + wave;
+      for (let i = 0; i < count; i++) {
+        enemies.push({
+          x: 520 + i * 90,
+          y: 60 + (i % 5) * 60,
+          width: 34,
+          height: 24,
+          alive: true
+        });
+      }
+    }
+
+    function updateHud() {
+      scoreEl.textContent = score;
+      waveEl.textContent = wave;
+      healthEl.textContent = health;
+    }
+
+    function pickQuestion() {
+      return questions[Math.floor(Math.random() * questions.length)];
+    }
+
+    function nextQuestion() {
+      currentQuestion = pickQuestion();
+      questionTextEl.textContent = currentQuestion.prompt;
+      aBtn.textContent = "A: " + currentQuestion.options[0];
+      bBtn.textContent = "B: " + currentQuestion.options[1];
+      cBtn.textContent = "C: " + currentQuestion.options[2];
+    }
+
+    function answerQuestion(index) {
+      if (!gameRunning || !currentQuestion) return;
+
+      if (index === currentQuestion.correct) {
+        fireBullet();
+        score += 10;
+        messageEl.textContent = "Correct. Laser fired.";
+      } else {
+        health -= 1;
+        messageEl.textContent = "Wrong answer. You lost 1 health.";
+      }
+
+      if (health <= 0) {
+        endGame();
+        return;
+      }
+
+      updateHud();
+      nextQuestion();
+    }
+
+    function fireBullet() {
+      bullets.push({
+        x: player.x + player.width,
+        y: player.y + player.height / 2 - 2,
+        width: 14,
+        height: 4,
+        speed: 6
+      });
+    }
+
+    function update() {
+      if (!gameRunning) return;
+
+      for (const star of stars) {
+        star.x -= 0.4;
+        if (star.x < 0) {
+          star.x = canvas.width;
+          star.y = Math.random() * canvas.height;
+        }
+      }
+
+      for (const bullet of bullets) {
+        bullet.x += bullet.speed;
+      }
+      bullets = bullets.filter(b => b.x < canvas.width + 20);
+
+      for (const enemy of enemies) {
+        if (!enemy.alive) continue;
+        enemy.x -= enemySpeed;
+
+        if (enemy.x < 110) {
+          enemy.alive = false;
+          health -= 1;
+          updateHud();
+          messageEl.textContent = "An enemy got through your defence.";
+          if (health <= 0) {
+            endGame();
+            return;
+          }
+        }
+      }
+
+      for (const bullet of bullets) {
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+
+          const hit =
+            bullet.x < enemy.x + enemy.width &&
+            bullet.x + bullet.width > enemy.x &&
+            bullet.y < enemy.y + enemy.height &&
+            bullet.y + bullet.height > enemy.y;
+
+          if (hit) {
+            enemy.alive = false;
+            bullet.x = canvas.width + 100;
+            score += 15;
+            updateHud();
+            messageEl.textContent = "Enemy destroyed.";
+          }
+        }
+      }
+
+      if (enemies.every(enemy => !enemy.alive)) {
+        wave += 1;
+        enemySpeed += 0.25;
+        updateHud();
+        spawnWave();
+        messageEl.textContent = "Wave cleared. New wave incoming.";
+      }
+    }
+
+    function drawShip() {
+      ctx.fillStyle = "#5ee7ff";
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+      ctx.fillStyle = "#b0f7ff";
+      ctx.beginPath();
+      ctx.moveTo(player.x + player.width, player.y + player.height / 2);
+      ctx.lineTo(player.x + player.width + 18, player.y);
+      ctx.lineTo(player.x + player.width + 18, player.y + player.height);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(player.x + 10, player.y + 6, 8, 8);
+    }
+
+    function drawEnemies() {
+      for (const enemy of enemies) {
+        if (!enemy.alive) continue;
+        ctx.fillStyle = "#ff6b6b";
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(enemy.x + 6, enemy.y + 6, 5, 5);
+        ctx.fillRect(enemy.x + 22, enemy.y + 6, 5, 5);
+      }
+    }
+
+    function drawBullets() {
+      ctx.fillStyle = "#ffe66d";
+      for (const bullet of bullets) {
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+      }
+    }
+
+    function drawStars() {
+      ctx.fillStyle = "#ffffff";
+      for (const star of stars) {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawStars();
+
+      ctx.strokeStyle = "#2d3d6b";
+      ctx.beginPath();
+      ctx.moveTo(120, 0);
+      ctx.lineTo(120, canvas.height);
+      ctx.stroke();
+
+      drawShip();
+      drawBullets();
+      drawEnemies();
+    }
+
+    function endGame() {
+      gameRunning = false;
+      questionTextEl.textContent = "Game over. Press Start Game to try again.";
+      messageEl.textContent = "Final score: " + score;
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    aBtn.addEventListener("click", () => answerQuestion(0));
+    bBtn.addEventListener("click", () => answerQuestion(1));
+    cBtn.addEventListener("click", () => answerQuestion(2));
+    startBtn.addEventListener("click", resetGame);
+
+    for (let i = 0; i < 70; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2 + 0.5
+      });
+    }
+
+    draw();
+    gameLoop();
+  </script>
+</body>
+</html>
