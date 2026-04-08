@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Math Quest Escape</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(180deg, #111827, #1f2937);
+      color: #f9fafb;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .game {
+      width: 100%;
+      max-width: 760px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 2px solid #374151;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      padding: 24px;
+    }
+    h1 { margin-top: 0; }
+    .stats, .room-card, .feedback, .controls, .summary {
+      margin-top: 18px;
+    }
+    .bar {
+      width: 100%;
+      height: 14px;
+      background: #374151;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .fill {
+      height: 100%;
+      background: #10b981;
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+    input {
+      padding: 12px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #4b5563;
+      background: #111827;
+      color: white;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 12px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .primary { background: #2563eb; color: white; }
+    .secondary { background: #4b5563; color: white; }
+    .good { color: #34d399; }
+    .bad { color: #f87171; }
+    .muted { color: #cbd5e1; }
+    .door {
+      border: 2px dashed #6b7280;
+      border-radius: 12px;
+      padding: 16px;
+      background: rgba(255,255,255,0.03);
+    }
+    .hidden { display: none; }
+    ul { padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <h1>Math Quest Escape</h1>
+    <p class="muted">Escape five rooms by solving maths challenges. Wrong answers cost energy. Hints reduce score.</p>
+
+    <div class="stats">
+      <div><strong>Room:</strong> <span id="room-number">1</span>/5</div>
+      <div><strong>Energy:</strong> <span id="energy">3</span></div>
+      <div><strong>Score:</strong> <span id="score">0</span></div>
+      <div class="bar"><div class="fill" id="progress-fill"></div></div>
+    </div>
+
+    <div class="room-card door">
+      <h2 id="room-title"></h2>
+      <p id="room-story"></p>
+      <p><strong>Puzzle:</strong> <span id="room-question"></span></p>
+      <input id="answer-input" type="text" placeholder="Type your answer here" />
+      <div class="controls">
+        <button class="primary" id="submit-btn">Unlock Door</button>
+        <button class="secondary" id="hint-btn">Use Hint</button>
+      </div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+
+    <div class="summary hidden" id="summary">
+      <h2>Run Complete</h2>
+      <p id="summary-text"></p>
+      <ul id="summary-list"></ul>
+      <button class="primary" id="restart-btn">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const rooms = [
+      {
+        title: "Room 1: The Gate of Addition",
+        story: "A stone gate glows with blue symbols. A voice says the first key is simple if your mind is calm.",
+        question: "27 + 15 = ?",
+        answer: "42",
+        hint: "Add tens first, then ones.",
+      },
+      {
+        title: "Room 2: The Bridge of Factors",
+        story: "The bridge shakes. Only a correct factor will stabilise the planks.",
+        question: "Enter the greatest common factor of 24 and 36.",
+        answer: "12",
+        hint: "List the factors of both numbers and find the largest shared one.",
+      },
+      {
+        title: "Room 3: The Merchant's Vault",
+        story: "A trader offers a key if you can work out the discount faster than his rivals.",
+        question: "An item costs 80 coins and is discounted by 25%. What is the new price?",
+        answer: "60",
+        hint: "Find 25% of 80, then subtract it from 80.",
+      },
+      {
+        title: "Room 4: The Hall of Equations",
+        story: "An iron door shows a balance scale. Solve the equation to move forward.",
+        question: "Solve for x: 3x + 9 = 24",
+        answer: "5",
+        hint: "Subtract 9 first, then divide by 3.",
+      },
+      {
+        title: "Room 5: The Final Lock",
+        story: "The final lock is powered by ratios. One mistake and the tower resets.",
+        question: "A map uses the scale 1:4. If the drawing shows 7 cm, what is the real length?",
+        answer: "28",
+        hint: "Multiply the drawing length by 4.",
+      }
+    ];
+
+    let state = {};
+
+    const roomNumber = document.getElementById("room-number");
+    const energy = document.getElementById("energy");
+    const score = document.getElementById("score");
+    const roomTitle = document.getElementById("room-title");
+    const roomStory = document.getElementById("room-story");
+    const roomQuestion = document.getElementById("room-question");
+    const answerInput = document.getElementById("answer-input");
+    const feedback = document.getElementById("feedback");
+    const progressFill = document.getElementById("progress-fill");
+    const summary = document.getElementById("summary");
+    const summaryText = document.getElementById("summary-text");
+    const summaryList = document.getElementById("summary-list");
+
+    function resetGame() {
+      state = {
+        roomIndex: 0,
+        energy: 3,
+        score: 0,
+        usedHints: 0,
+        log: []
+      };
+      summary.classList.add("hidden");
+      document.querySelector(".room-card").classList.remove("hidden");
+      answerInput.value = "";
+      feedback.innerHTML = "";
+      render();
+    }
+
+    function render() {
+      const room = rooms[state.roomIndex];
+      roomNumber.textContent = String(state.roomIndex + 1);
+      energy.textContent = String(state.energy);
+      score.textContent = String(state.score);
+      progressFill.style.width = `${(state.roomIndex / rooms.length) * 100}%`;
+      roomTitle.textContent = room.title;
+      roomStory.textContent = room.story;
+      roomQuestion.textContent = room.question;
+      answerInput.focus();
+    }
+
+    function endGame(won) {
+      document.querySelector(".room-card").classList.add("hidden");
+      summary.classList.remove("hidden");
+      progressFill.style.width = "100%";
+      summaryText.textContent = won
+        ? `You escaped the tower with ${state.score} points and ${state.energy} energy left.`
+        : `The tower defeated you, but you still earned ${state.score} points of practice.`;
+
+      summaryList.innerHTML = "";
+      state.log.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        summaryList.appendChild(li);
+      });
+    }
+
+    document.getElementById("submit-btn").addEventListener("click", () => {
+      const currentRoom = rooms[state.roomIndex];
+      const userAnswer = answerInput.value.trim();
+
+      if (!userAnswer) {
+        feedback.innerHTML = `<p class="bad">Type an answer first.</p>`;
+        return;
+      }
+
+      if (userAnswer === currentRoom.answer) {
+        state.score += 20;
+        state.log.push(`${currentRoom.title}: solved correctly.`);
+        feedback.innerHTML = `<p class="good">Correct. The door unlocks.</p>`;
+        state.roomIndex += 1;
+        answerInput.value = "";
+
+        if (state.roomIndex >= rooms.length) {
+          endGame(true);
+        } else {
+          setTimeout(() => {
+            feedback.innerHTML = "";
+            render();
+          }, 500);
+        }
+      } else {
+        state.energy -= 1;
+        state.log.push(`${currentRoom.title}: wrong attempt with answer '${userAnswer}'.`);
+        feedback.innerHTML = `<p class="bad">Incorrect. The room drains 1 energy.</p>`;
+        answerInput.select();
+        if (state.energy <= 0) {
+          endGame(false);
+        } else {
+          render();
+        }
+      }
+    });
+
+    document.getElementById("hint-btn").addEventListener("click", () => {
+      const currentRoom = rooms[state.roomIndex];
+      state.usedHints += 1;
+      state.score = Math.max(0, state.score - 5);
+      feedback.innerHTML = `<p class="muted">Hint: ${currentRoom.hint}</p>`;
+    });
+
+    document.getElementById("restart-btn").addEventListener("click", resetGame);
+
+    answerInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        document.getElementById("submit-btn").click();
+      }
+    });
+
+    resetGame();
+  </script>
+</body>
+</html>
