@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary Quest — Number Systems Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fdf6ec;
+    --card: #fffaf3;
+    --ink: #1a0f00;
+    --mid: #7a5c3a;
+    --light: #c8a87a;
+    --accent: #e85d04;
+    --accent2: #0077b6;
+    --green: #2d6a4f;
+    --red: #c1121f;
+    --border: #e5d5be;
+    --shadow: rgba(100,60,0,0.12);
+    --bit-on: #e85d04;
+    --bit-off: #e5d5be;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+  }
+  /* Subtle paper texture top bar */
+  .topbar {
+    background: var(--ink);
+    color: #fdf6ec;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .topbar h1 span { color: var(--accent); }
+  .score-chips { display: flex; gap: 0.8rem; }
+  .chip {
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .chip.correct { background: rgba(45,106,79,0.5); }
+  .chip.streak { background: rgba(232,93,4,0.5); }
+
+  .main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  /* Mode tabs */
+  .mode-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    background: var(--border);
+    border-radius: 10px;
+    padding: 4px;
+  }
+  .tab {
+    flex: 1;
+    padding: 0.6rem;
+    text-align: center;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--mid);
+    transition: all 0.2s;
+    border: none;
+    background: transparent;
+  }
+  .tab.active { background: var(--card); color: var(--ink); box-shadow: 0 2px 8px var(--shadow); }
+
+  /* Question card */
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px var(--shadow);
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .mode-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.7rem;
+    border-radius: 4px;
+    background: var(--accent);
+    color: white;
+    margin-bottom: 1rem;
+  }
+  .question-text {
+    font-size: 1rem;
+    color: var(--mid);
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+  .number-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+  .subscript {
+    font-size: 0.7rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Bit toggler for binary building */
+  .bit-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 1.5rem 0;
+    justify-content: center;
+  }
+  .bit-col { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+  .bit-weight { font-size: 0.65rem; color: var(--mid); font-family: 'JetBrains Mono', monospace; }
+  .bit-btn {
+    width: 48px; height: 48px;
+    border-radius: 8px;
+    border: 2px solid var(--bit-off);
+    background: var(--bit-off);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--mid);
+  }
+  .bit-btn.on {
+    border-color: var(--bit-on);
+    background: var(--bit-on);
+    color: white;
+    box-shadow: 0 3px 12px rgba(232,93,4,0.35);
+  }
+
+  /* MCQ options */
+  .options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin: 1.5rem 0;
+  }
+  .option-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 1rem;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink);
+    text-align: center;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--accent2); color: var(--accent2); transform: translateY(-2px); }
+  .option-btn.correct-ans { border-color: var(--green); background: #d8f3dc; color: var(--green); }
+  .option-btn.wrong-ans { border-color: var(--red); background: #ffe8ea; color: var(--red); }
+  .option-btn:disabled { cursor: default; }
+
+  /* Input answer */
+  .answer-row { display: flex; gap: 0.8rem; margin-top: 1.2rem; align-items: center; }
+  #answer-input {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    padding: 0.8rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #answer-input:focus { border-color: var(--accent2); }
+  #answer-input.correct { border-color: var(--green); background: #d8f3dc; }
+  #answer-input.wrong { border-color: var(--red); background: #ffe8ea; }
+
+  .btn {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.8rem 1.5rem;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--ink); color: white; }
+  .btn-primary:hover { background: var(--accent); }
+  .btn-secondary { background: var(--border); color: var(--mid); }
+  .btn-secondary:hover { background: var(--light); color: var(--ink); }
+
+  /* Feedback */
+  .feedback {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    display: none;
+    line-height: 1.6;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: #d8f3dc; color: var(--green); border-left: 4px solid var(--green); }
+  .feedback.wrong-fb { background: #ffe8ea; color: var(--red); border-left: 4px solid var(--red); }
+
+  /* Binary value preview */
+  .binary-preview {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    color: var(--mid);
+  }
+  .binary-preview .val { font-size: 1.5rem; font-weight: 700; color: var(--ink); }
+
+  /* Learning panel */
+  .learn-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px var(--shadow);
+  }
+  .learn-panel h3 { font-size: 0.85rem; letter-spacing: 0.1em; color: var(--mid); margin-bottom: 1rem; text-transform: uppercase; }
+  .learn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
+  .learn-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--mid);
+  }
+  .learn-item span { color: var(--accent); font-weight: 700; }
+
+  /* Next btn */
+  #next-btn {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+    border-radius: 10px;
+    background: var(--ink);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    margin-top: 1rem;
+    display: none;
+    transition: background 0.2s;
+  }
+  #next-btn:hover { background: var(--accent); }
+  #next-btn.show { display: block; }
+
+  /* Progress */
+  .progress { height: 6px; background: var(--border); border-radius: 3px; margin-bottom: 1.5rem; }
+  .progress-inner { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; transition: width 0.3s; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>BINARY <span>QUEST</span></h1>
+  <div class="score-chips">
+    <div class="chip correct" id="score-chip">✓ 0</div>
+    <div class="chip streak" id="streak-chip">🔥 0</div>
+    <div class="chip" id="q-chip">Q 0/10</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="mode-tabs">
+    <button class="tab active" onclick="setMode('bin2dec')">BIN → DEC</button>
+    <button class="tab" onclick="setMode('dec2bin')">DEC → BIN</button>
+    <button class="tab" onclick="setMode('hex2dec')">HEX → DEC</button>
+    <button class="tab" onclick="setMode('dec2hex')">DEC → HEX</button>
+  </div>
+
+  <div class="progress"><div class="progress-inner" id="progress-inner" style="width:0%"></div></div>
+
+  <div class="question-card" id="question-card">
+    <!-- Filled by JS -->
+  </div>
+
+  <button id="next-btn" onclick="nextQuestion()">Next Question →</button>
+
+  <div class="learn-panel">
+    <h3>📚 Quick Reference</h3>
+    <div class="learn-row" id="ref-panel"></div>
+  </div>
+</div>
+
+<script>
+let mode = 'bin2dec';
+let score = 0;
+let streak = 0;
+let qNum = 0;
+let total = 10;
+let answered = false;
+let bits = [0,0,0,0,0,0,0,0];
+
+const weights = [128, 64, 32, 16, 8, 4, 2, 1];
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['bin2dec','dec2bin','hex2dec','dec2hex'][i] === m);
+  });
+  score = 0; streak = 0; qNum = 0; answered = false;
+  updateChips();
+  buildRefPanel();
+  generateQuestion();
+}
+
+function buildRefPanel() {
+  const panel = document.getElementById('ref-panel');
+  let html = '';
+  const refs = [
+    ['0000','0','0'], ['0001','1','1'], ['0010','2','2'], ['0011','3','3'],
+    ['0100','4','4'], ['0101','5','5'], ['0110','6','6'], ['0111','7','7'],
+    ['1000','8','8'], ['1001','9','9'], ['1010','10','A'], ['1011','11','B'],
+    ['1100','12','C'], ['1101','13','D'], ['1110','14','E'], ['1111','15','F'],
+  ];
+  refs.forEach(([b, d, h]) => {
+    if (mode === 'bin2dec' || mode === 'dec2bin') {
+      html += `<div class="learn-item">${b} = <span>${d}</span></div>`;
+    } else {
+      html += `<div class="learn-item">${d} = <span>${h}</span></div>`;
+    }
+  });
+  panel.innerHTML = html;
+}
+
+function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function toBin8(n) { return n.toString(2).padStart(8, '0'); }
+function toHex(n) { return n.toString(16).toUpperCase(); }
+
+function generateQuestion() {
+  answered = false;
+  bits = [0,0,0,0,0,0,0,0];
+  qNum++;
+  if (qNum > total) { showComplete(); return; }
+  updateChips();
+  document.getElementById('progress-inner').style.width = ((qNum-1)/total*100) + '%';
+  document.getElementById('next-btn').classList.remove('show');
+
+  const card = document.getElementById('question-card');
+  let html = '';
+
+  if (mode === 'bin2dec') {
+    const n = rnd(1, 255);
+    const binStr = toBin8(n);
+    html = `
+      <span class="mode-badge">Binary → Decimal</span>
+      <p class="question-text">What is the decimal value of this 8-bit binary number?</p>
+      <div class="number-display">${binStr}<sub class="subscript">₂</sub></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback"></div>`;
+    card.innerHTML = html;
+    const opts = genOptions(n, 0, 255);
+    renderMCQ(opts, n, v => v.toString());
+
+  } else if (mode === 'dec2bin') {
+    const n = rnd(1, 255);
+    html = `
+      <span class="mode-badge">Decimal → Binary</span>
+      <p class="question-text">Toggle the bits to represent this decimal number in 8-bit binary:</p>
+      <div class="number-display">${n}<sub class="subscript">₁₀</sub></div>
+      <div class="bit-row" id="bit-row"></div>
+      <div class="binary-preview">
+        Your binary: <span class="val" id="bin-preview">00000000</span> = <span class="val" id="dec-preview">0</span>
+      </div>
+      <div class="answer-row">
+        <button class="btn btn-primary" onclick="checkBits(${n})">Check Answer</button>
+      </div>
+      <div class="feedback" id="feedback"></div>`;
+    card.innerHTML = html;
+    renderBitToggler();
+
+  } else if (mode === 'hex2dec') {
+    const n = rnd(1, 255);
+    const hexStr = toHex(n);
+    html = `
+      <span class="mode-badge">Hexadecimal → Decimal</span>
+      <p class="question-text">What is the decimal value of this hexadecimal number?</p>
+      <div class="number-display">0x${hexStr}<sub class="subscript">₁₆</sub></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback"></div>`;
+    card.innerHTML = html;
+    const opts = genOptions(n, 0, 255);
+    renderMCQ(opts, n, v => v.toString());
+
+  } else if (mode === 'dec2hex') {
+    const n = rnd(1, 255);
+    html = `
+      <span class="mode-badge">Decimal → Hexadecimal</span>
+      <p class="question-text">What is the hexadecimal representation of this number?</p>
+      <div class="number-display">${n}<sub class="subscript">₁₀</sub></div>
+      <div class="answer-row">
+        <span style="font-family:monospace;font-size:1.2rem;color:var(--mid)">0x</span>
+        <input type="text" id="answer-input" placeholder="??" maxlength="2" style="max-width:100px" oninput="this.value=this.value.toUpperCase()">
+        <button class="btn btn-primary" onclick="checkHex(${n})">Check</button>
+      </div>
+      <div class="feedback" id="feedback"></div>`;
+    card.innerHTML = html;
+  }
+}
+
+function genOptions(correct, min, max) {
+  const opts = new Set([correct]);
+  while (opts.size < 4) {
+    const fake = rnd(min, max);
+    if (Math.abs(fake - correct) > 1) opts.add(fake);
+  }
+  return [...opts].sort(() => Math.random() - 0.5);
+}
+
+function renderMCQ(opts, correct, fmt) {
+  const div = document.getElementById('options');
+  div.innerHTML = opts.map(v =>
+    `<button class="option-btn" onclick="checkMCQ(this, ${v}, ${correct})">${fmt(v)}</button>`
+  ).join('');
+}
+
+function checkMCQ(btn, chosen, correct) {
+  if (answered) return;
+  answered = true;
+  const allBtns = document.querySelectorAll('.option-btn');
+  allBtns.forEach(b => {
+    b.disabled = true;
+    const val = parseInt(b.textContent);
+    if (val === correct) b.classList.add('correct-ans');
+  });
+  const fb = document.getElementById('feedback');
+  if (chosen === correct) {
+    btn.classList.add('correct-ans');
+    score++; streak++;
+    fb.className = 'feedback show correct-fb';
+    fb.textContent = `✅ Correct! ${mode === 'bin2dec' ? toBin8(correct)+'₂' : mode === 'hex2dec' ? '0x'+toHex(correct) : correct} = ${correct}`;
+  } else {
+    btn.classList.add('wrong-ans');
+    streak = 0;
+    fb.className = 'feedback show wrong-fb';
+    fb.textContent = `❌ The answer was ${correct}. ${mode === 'bin2dec' ? explainBin(correct) : explainHex(correct)}`;
+  }
+  updateChips();
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function renderBitToggler() {
+  const row = document.getElementById('bit-row');
+  row.innerHTML = weights.map((w, i) =>
+    `<div class="bit-col">
+      <span class="bit-weight">${w}</span>
+      <button class="bit-btn" id="bit-${i}" onclick="toggleBit(${i})">0</button>
+    </div>`
+  ).join('');
+}
+
+function toggleBit(i) {
+  if (answered) return;
+  bits[i] = bits[i] ? 0 : 1;
+  document.getElementById('bit-'+i).textContent = bits[i];
+  document.getElementById('bit-'+i).classList.toggle('on', bits[i] === 1);
+  const val = bits.reduce((acc, b, idx) => acc + b * weights[idx], 0);
+  document.getElementById('bin-preview').textContent = bits.join('');
+  document.getElementById('dec-preview').textContent = val;
+}
+
+function checkBits(correct) {
+  if (answered) return;
+  const val = bits.reduce((acc, b, idx) => acc + b * weights[idx], 0);
+  const fb = document.getElementById('feedback');
+  answered = true;
+  if (val === correct) {
+    score++; streak++;
+    fb.className = 'feedback show correct-fb';
+    fb.textContent = `✅ Perfect! ${toBin8(correct)}₂ = ${correct}`;
+  } else {
+    streak = 0;
+    fb.className = 'feedback show wrong-fb';
+    fb.textContent = `❌ You got ${val}. The correct binary is ${toBin8(correct)}. ${explainBin(correct)}`;
+  }
+  updateChips();
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function checkHex(correct) {
+  if (answered) return;
+  const input = document.getElementById('answer-input').value.trim().toUpperCase();
+  const expected = toHex(correct);
+  const fb = document.getElementById('feedback');
+  answered = true;
+  if (input === expected) {
+    score++; streak++;
+    document.getElementById('answer-input').classList.add('correct');
+    fb.className = 'feedback show correct-fb';
+    fb.textContent = `✅ Correct! ${correct}₁₀ = 0x${expected}`;
+  } else {
+    streak = 0;
+    document.getElementById('answer-input').classList.add('wrong');
+    fb.className = 'feedback show wrong-fb';
+    fb.textContent = `❌ The answer is 0x${expected}. ${explainHex(correct)}`;
+  }
+  updateChips();
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function explainBin(n) {
+  const on = [];
+  weights.forEach((w, i) => { if (n & w) on.push(`${w}`); });
+  return `Bits active: ${on.join(' + ')} = ${n}`;
+}
+
+function explainHex(n) {
+  const hi = Math.floor(n / 16);
+  const lo = n % 16;
+  const hexDigit = v => v < 10 ? v.toString() : String.fromCharCode(65 + v - 10);
+  return `${n} = ${hi}×16 + ${lo} = ${hexDigit(hi)}${hexDigit(lo)}`;
+}
+
+function updateChips() {
+  document.getElementById('score-chip').textContent = `✓ ${score}`;
+  document.getElementById('streak-chip').textContent = `🔥 ${streak}`;
+  document.getElementById('q-chip').textContent = `Q ${Math.min(qNum, total)}/${total}`;
+}
+
+function nextQuestion() { generateQuestion(); }
+
+function showComplete() {
+  const card = document.getElementById('question-card');
+  const pct = Math.round((score / total) * 100);
+  card.innerHTML = `
+    <div style="text-align:center; padding:1rem">
+      <div style="font-size:3rem;margin-bottom:1rem">${pct >= 80 ? '🏆' : pct >= 50 ? '👍' : '📖'}</div>
+      <h2 style="font-size:2rem;margin-bottom:0.5rem">Round Complete!</h2>
+      <p style="color:var(--mid);margin-bottom:1.5rem">Score: ${score}/${total} (${pct}%)</p>
+      <p style="font-size:0.9rem;color:var(--mid);margin-bottom:2rem">${pct >= 80 ? 'Excellent! You have mastered this mode.' : pct >= 50 ? 'Good work! Keep practicing to improve.' : 'Keep studying the reference table below!'}</p>
+      <button class="btn btn-primary" style="width:100%" onclick="restartMode()">Play Again</button>
+    </div>`;
+  document.getElementById('progress-inner').style.width = '100%';
+  document.getElementById('next-btn').classList.remove('show');
+}
+
+function restartMode() {
+  score = 0; streak = 0; qNum = 0;
+  updateChips();
+  generateQuestion();
+}
+
+// Init
+buildRefPanel();
+generateQuestion();
+</script>
+</body>
+</html>
