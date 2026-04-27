@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chem Reaction Rush</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; }
+    .wrap { max-width: 1020px; margin: 0 auto; padding: 20px; }
+    .layout { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; }
+    .panel { background: #111827; border: 1px solid #334155; border-radius: 14px; padding: 16px; }
+    canvas { width: 100%; background: linear-gradient(#0b1022, #111827); border-radius: 12px; border: 2px solid #334155; }
+    button { background: #2563eb; color: white; border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: bold; margin-right: 8px; }
+    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .opt { background: #1d4ed8; border: 0; border-radius: 12px; padding: 12px; color: white; font-weight: bold; cursor: pointer; }
+    .note { background: #0f172a; border-left: 4px solid #22c55e; padding: 12px; border-radius: 8px; margin-top: 10px; }
+    @media (max-width: 850px) { .layout { grid-template-columns: 1fr; } .options { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Chem Reaction Rush</h1>
+  <p>Catch the correct product before it falls. Learn simple reactions through quick play.</p>
+  <div class="layout">
+    <div class="panel">
+      <canvas id="game" width="620" height="420"></canvas>
+      <div style="margin-top:12px;">
+        <button id="startBtn">Start</button>
+        <button id="pauseBtn">Pause</button>
+      </div>
+      <div class="options" id="options"></div>
+    </div>
+    <div class="panel">
+      <p>Score: <span id="score">0</span> | Lives: <span id="lives">3</span></p>
+      <div class="note"><strong>Reaction:</strong> <span id="reaction"></span></div>
+      <p id="message">Pick the correct product, then move the lab basket under it with arrow keys.</p>
+      <h3>Learning notes</h3>
+      <ul>
+        <li>Word equations show what substances react and what new substance forms.</li>
+        <li>Example: acid + base → salt + water.</li>
+        <li>This game uses simple classroom-level patterns, not advanced balancing.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  const data = [
+    { reactants: "acid + base", answer: "salt + water", wrong: ["carbon dioxide", "oxygen", "glucose"], fact: "Neutralisation often produces salt and water." },
+    { reactants: "metal + oxygen", answer: "metal oxide", wrong: ["salt + water", "hydrogen", "chlorine"], fact: "Metals react with oxygen to form metal oxides." },
+    { reactants: "fuel + oxygen", answer: "carbon dioxide + water", wrong: ["salt", "metal oxide", "hydrogen"], fact: "Complete combustion of many fuels forms carbon dioxide and water." },
+    { reactants: "plant photosynthesis inputs", answer: "glucose + oxygen", wrong: ["salt + water", "metal oxide", "steam only"], fact: "Photosynthesis uses carbon dioxide, water, and light to make glucose and oxygen." }
+  ];
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const livesEl = document.getElementById('lives');
+  const reactionEl = document.getElementById('reaction');
+  const messageEl = document.getElementById('message');
+  const optionsEl = document.getElementById('options');
+
+  let score = 0, lives = 3, running = false;
+  const basket = { x: 260, y: 370, w: 100, h: 20, speed: 7 };
+  let falling = [];
+  let correctText = "";
+  let currentFact = "";
+  const keys = {};
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function newQuestion() {
+    optionsEl.innerHTML = '';
+    const q = data[Math.floor(Math.random() * data.length)];
+    reactionEl.textContent = q.reactants;
+    currentFact = q.fact;
+    correctText = q.answer;
+    messageEl.textContent = "Choose the correct product and catch it.";
+    const choices = shuffle([q.answer, ...q.wrong]).slice(0,4);
+    choices.forEach(text => {
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.textContent = text;
+      b.addEventListener('click', () => spawnFalling(choices, text));
+      optionsEl.appendChild(b);
+    });
+  }
+
+  function spawnFalling(choices, selected) {
+    if (selected !== correctText) {
+      messageEl.textContent = "Wrong product choice. " + currentFact;
+      score = Math.max(0, score - 1);
+      scoreEl.textContent = score;
+      return;
+    }
+    falling = choices.map((text, i) => ({
+      text,
+      x: 40 + i * 140,
+      y: 40,
+      w: 120,
+      h: 34,
+      speed: 1.4 + Math.random() * 0.8,
+      good: text === correctText
+    }));
+    messageEl.textContent = "Move the basket and catch: " + correctText;
+  }
+
+  function update() {
+    if (!running) return;
+    if (keys["ArrowLeft"]) basket.x -= basket.speed;
+    if (keys["ArrowRight"]) basket.x += basket.speed;
+    basket.x = Math.max(0, Math.min(canvas.width - basket.w, basket.x));
+    for (const f of falling) {
+      f.y += f.speed;
+      if (f.y + f.h >= basket.y && f.x + f.w >= basket.x && f.x <= basket.x + basket.w) {
+        if (f.good) {
+          score += 10;
+          messageEl.textContent = "Correct catch. " + currentFact;
+        } else {
+          lives -= 1;
+          messageEl.textContent = "That product did not match the reaction.";
+        }
+        scoreEl.textContent = score;
+        livesEl.textContent = lives;
+        falling = [];
+        if (lives <= 0) {
+          running = false;
+          messageEl.textContent += " Game over. Press Start to play again.";
+        } else {
+          setTimeout(newQuestion, 700);
+        }
+        return;
+      }
+    }
+    if (falling.some(f => f.y > canvas.height)) {
+      lives -= 1;
+      livesEl.textContent = lives;
+      falling = [];
+      messageEl.textContent = "Missed the correct product.";
+      if (lives <= 0) {
+        running = false;
+        messageEl.textContent += " Game over. Press Start to play again.";
+      } else {
+        setTimeout(newQuestion, 700);
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(0, 392, canvas.width, 28);
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillRect(basket.x, basket.y, basket.w, basket.h);
+    ctx.font = "16px Arial";
+    falling.forEach(f => {
+      ctx.fillStyle = f.good ? "#16a34a" : "#7c3aed";
+      ctx.fillRect(f.x, f.y, f.w, f.h);
+      ctx.fillStyle = "#fff";
+      ctx.fillText(f.text, f.x + 6, f.y + 22);
+    });
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  document.addEventListener('keydown', e => keys[e.key] = true);
+  document.addEventListener('keyup', e => keys[e.key] = false);
+  document.getElementById('startBtn').addEventListener('click', () => {
+    score = 0; lives = 3; running = true; basket.x = 260; falling = [];
+    scoreEl.textContent = score; livesEl.textContent = lives;
+    newQuestion();
+  });
+  document.getElementById('pauseBtn').addEventListener('click', () => running = !running);
+
+  newQuestion();
+  loop();
+})();
+</script>
+</body>
+</html>
