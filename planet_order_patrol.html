@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planet Order Patrol</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #020617; color: #e2e8f0; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 20px; }
+    .layout { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; }
+    .panel { background: #0f172a; border: 1px solid #334155; border-radius: 14px; padding: 16px; }
+    .slots, .bank { display: grid; gap: 10px; }
+    .slots { grid-template-columns: repeat(2, 1fr); }
+    .slot { min-height: 62px; border: 2px dashed #475569; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 8px; background: rgba(15,23,42,0.7); }
+    .planet { background: #1d4ed8; color: white; border-radius: 999px; padding: 12px 16px; cursor: grab; user-select: none; text-align: center; font-weight: bold; }
+    .planet.small { padding: 10px 12px; }
+    .bank { grid-template-columns: repeat(2, 1fr); margin-top: 12px; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+    button { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: bold; cursor: pointer; }
+    #checkBtn { background: #2563eb; color: white; }
+    #resetBtn { background: #475569; color: white; }
+    .fact { background: #111827; border-left: 4px solid #22c55e; padding: 12px; border-radius: 8px; margin-top: 12px; }
+    .sunline { height: 8px; background: linear-gradient(90deg, #f59e0b, #fcd34d, #f59e0b); border-radius: 8px; margin: 10px 0 20px; }
+    @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Planet Order Patrol</h1>
+  <p>Drag the planets into the correct order from the Sun. Every round teaches a space fact.</p>
+  <div class="layout">
+    <div class="panel">
+      <h3>Arrange from nearest to farthest from the Sun</h3>
+      <div class="sunline"></div>
+      <div class="slots" id="slots"></div>
+      <div class="bank" id="bank"></div>
+      <div class="controls" style="margin-top:14px;">
+        <button id="checkBtn">Check Order</button>
+        <button id="resetBtn">New Shuffle</button>
+      </div>
+    </div>
+    <div class="panel">
+      <p>Score: <span id="score">0</span> | Round: <span id="round">1</span></p>
+      <p id="message">Place all eight planets in order.</p>
+      <div class="fact" id="factBox">Mercury is the closest planet to the Sun and has no true atmosphere like Earth’s.</div>
+      <h3>Learning notes</h3>
+      <ul>
+        <li>Order matters in astronomy because distance affects temperature and orbital speed.</li>
+        <li>The four inner planets are rocky. The outer planets are gas or ice giants.</li>
+        <li>Remember: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  const order = [
+    ["Mercury", "Mercury is the fastest planet around the Sun."],
+    ["Venus", "Venus is the hottest planet because of its thick atmosphere."],
+    ["Earth", "Earth is the only known planet with surface liquid water."],
+    ["Mars", "Mars has giant volcanoes and signs of ancient water."],
+    ["Jupiter", "Jupiter is the largest planet in the Solar System."],
+    ["Saturn", "Saturn is famous for its ring system."],
+    ["Uranus", "Uranus rotates on its side."],
+    ["Neptune", "Neptune has some of the fastest winds in the Solar System."]
+  ];
+
+  const slotsEl = document.getElementById('slots');
+  const bankEl = document.getElementById('bank');
+  const scoreEl = document.getElementById('score');
+  const roundEl = document.getElementById('round');
+  const messageEl = document.getElementById('message');
+  const factBox = document.getElementById('factBox');
+  let dragged = null;
+  let score = 0;
+  let round = 1;
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function createPlanet(name) {
+    const div = document.createElement('div');
+    div.className = 'planet';
+    if (name.length > 7) div.classList.add('small');
+    div.textContent = name;
+    div.draggable = true;
+    div.dataset.name = name;
+    div.addEventListener('dragstart', () => { dragged = div; });
+    return div;
+  }
+
+  function makeDropZone(el) {
+    el.addEventListener('dragover', e => e.preventDefault());
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!dragged) return;
+      if (el.classList.contains('slot') || el.id === 'bank') {
+        if (el.id === 'bank') {
+          bankEl.appendChild(dragged);
+        } else if (!el.querySelector('.planet')) {
+          el.textContent = '';
+          el.appendChild(dragged);
+        } else {
+          bankEl.appendChild(el.querySelector('.planet'));
+          el.textContent = '';
+          el.appendChild(dragged);
+        }
+      }
+    });
+  }
+
+  function resetBoard() {
+    slotsEl.innerHTML = '';
+    bankEl.innerHTML = '';
+    for (let i = 0; i < 8; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      slot.textContent = i + 1;
+      makeDropZone(slot);
+      slotsEl.appendChild(slot);
+    }
+    makeDropZone(bankEl);
+    shuffle(order.map(x => x[0])).forEach(name => bankEl.appendChild(createPlanet(name)));
+    messageEl.textContent = 'Place all eight planets in order.';
+    factBox.textContent = order[0][1];
+  }
+
+  function checkOrder() {
+    const chosen = [...slotsEl.children].map(slot => {
+      const planet = slot.querySelector('.planet');
+      return planet ? planet.dataset.name : null;
+    });
+    if (chosen.includes(null)) {
+      messageEl.textContent = 'Fill every slot first.';
+      return;
+    }
+    let correct = true;
+    for (let i = 0; i < order.length; i++) {
+      if (chosen[i] !== order[i][0]) {
+        correct = false;
+        break;
+      }
+    }
+    if (correct) {
+      score += 10;
+      messageEl.textContent = 'Correct order. Great job.';
+      scoreEl.textContent = score;
+      factBox.textContent = order[Math.floor(Math.random() * order.length)][1];
+      round += 1;
+      roundEl.textContent = round;
+      setTimeout(resetBoard, 900);
+    } else {
+      score = Math.max(0, score - 2);
+      scoreEl.textContent = score;
+      const firstWrongIndex = chosen.findIndex((name, i) => name !== order[i][0]);
+      messageEl.textContent = 'Not yet. Check position ' + (firstWrongIndex + 1) + '.';
+      factBox.textContent = order[firstWrongIndex][0] + ': ' + order[firstWrongIndex][1];
+    }
+  }
+
+  document.getElementById('checkBtn').addEventListener('click', checkOrder);
+  document.getElementById('resetBtn').addEventListener('click', resetBoard);
+  resetBoard();
+})();
+</script>
+</body>
+</html>
