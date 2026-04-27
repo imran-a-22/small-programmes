@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fraction Forge</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #111827; color: #f9fafb; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 20px; }
+    h1 { margin-top: 0; }
+    .grid { display: grid; grid-template-columns: 1.3fr 0.9fr; gap: 18px; }
+    canvas { width: 100%; background: linear-gradient(#0f172a, #1e293b); border: 2px solid #334155; border-radius: 12px; }
+    .panel { background: #1f2937; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
+    .big { font-size: 22px; font-weight: bold; }
+    button { background: #2563eb; color: white; border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: bold; }
+    button:hover { filter: brightness(1.08); }
+    ul { padding-left: 18px; }
+    .note { color: #cbd5e1; font-size: 14px; }
+    .good { color: #86efac; }
+    .bad { color: #fca5a5; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+    input[type="range"] { width: 160px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Fraction Forge</h1>
+  <p>Launch your fraction shot into the target with an equivalent value. Learn equivalence by playing.</p>
+  <div class="grid">
+    <div class="panel">
+      <canvas id="game" width="620" height="420"></canvas>
+      <div class="controls">
+        <label>Angle <input id="angle" type="range" min="15" max="75" value="45"></label>
+        <span id="angleVal">45°</span>
+        <label>Power <input id="power" type="range" min="20" max="80" value="48"></label>
+        <span id="powerVal">48</span>
+        <button id="fireBtn">Fire</button>
+        <button id="nextBtn">Next Round</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="big">Target Fraction: <span id="targetText"></span></div>
+      <p>Hit the chest labelled with a fraction equal to the target.</p>
+      <p>Score: <span id="score">0</span> | Lives: <span id="lives">3</span> | Round: <span id="round">1</span></p>
+      <p id="feedback" class="note">Equivalent fractions name the same amount, even if the numbers look different.</p>
+      <h3>Quick learning notes</h3>
+      <ul>
+        <li>Multiply top and bottom by the same number to make an equivalent fraction.</li>
+        <li>Example: 1/2 = 2/4 = 3/6.</li>
+        <li>If only one number changes, the value usually changes too.</li>
+      </ul>
+      <h3>How to play</h3>
+      <ul>
+        <li>Adjust angle and power.</li>
+        <li>Fire the glowing shot.</li>
+        <li>Hit the correct equivalent fraction chest.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const angleInput = document.getElementById('angle');
+  const powerInput = document.getElementById('power');
+  const angleVal = document.getElementById('angleVal');
+  const powerVal = document.getElementById('powerVal');
+  const targetText = document.getElementById('targetText');
+  const scoreEl = document.getElementById('score');
+  const livesEl = document.getElementById('lives');
+  const roundEl = document.getElementById('round');
+  const feedback = document.getElementById('feedback');
+  const fireBtn = document.getElementById('fireBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  const g = 0.22;
+  let score = 0, lives = 3, round = 1;
+  let chests = [];
+  let projectile = null;
+  let target = null;
+  let canShoot = true;
+  const stars = Array.from({length: 50}, () => ({x: Math.random()*620, y: Math.random()*220, r: Math.random()*2+1}));
+
+  function gcd(a, b) { while (b) [a, b] = [b, a % b]; return Math.abs(a); }
+  function simplify(n, d) { const c = gcd(n, d); return [n/c, d/c]; }
+  function eq(a, b) {
+    const [an, ad] = simplify(a.n, a.d);
+    const [bn, bd] = simplify(b.n, b.d);
+    return an === bn && ad === bd;
+  }
+  function randomFraction() {
+    const base = [
+      {n:1,d:2}, {n:1,d:3}, {n:2,d:3}, {n:3,d:4},
+      {n:2,d:5}, {n:3,d:5}, {n:4,d:5}, {n:5,d:6}
+    ];
+    return base[Math.floor(Math.random() * base.length)];
+  }
+  function scaleFraction(fr) {
+    const k = 2 + Math.floor(Math.random() * 4);
+    return {n: fr.n * k, d: fr.d * k};
+  }
+  function makeWrong(target) {
+    let candidate;
+    do {
+      candidate = {n: 1 + Math.floor(Math.random() * 10), d: 2 + Math.floor(Math.random() * 10)};
+    } while (eq(candidate, target) || candidate.n >= candidate.d);
+    return candidate;
+  }
+  function fmt(fr) { return fr.n + "/" + fr.d; }
+
+  function setupRound() {
+    target = randomFraction();
+    targetText.textContent = fmt(target);
+    feedback.textContent = "Choose the chest with a fraction equivalent to " + fmt(target) + ".";
+    feedback.className = "note";
+    chests = [];
+    const correctIndex = Math.floor(Math.random() * 3);
+    for (let i = 0; i < 3; i++) {
+      const fr = i === correctIndex ? scaleFraction(target) : makeWrong(target);
+      chests.push({x: 340 + i * 90, y: 310, w: 68, h: 68, fr, correct: i === correctIndex});
+    }
+    projectile = null;
+    canShoot = true;
+    roundEl.textContent = round;
+  }
+
+  function shoot() {
+    if (!canShoot) return;
+    const angle = Number(angleInput.value) * Math.PI / 180;
+    const power = Number(powerInput.value) / 2;
+    projectile = {x: 85, y: 315, vx: Math.cos(angle) * power, vy: -Math.sin(angle) * power, r: 9};
+    canShoot = false;
+  }
+
+  function checkHit() {
+    if (!projectile) return false;
+    for (const chest of chests) {
+      if (projectile.x + projectile.r > chest.x && projectile.x - projectile.r < chest.x + chest.w &&
+          projectile.y + projectile.r > chest.y && projectile.y - projectile.r < chest.y + chest.h) {
+        if (chest.correct) {
+          score += 10;
+          feedback.textContent = "Correct. " + fmt(chest.fr) + " is equivalent to " + fmt(target) + ".";
+          feedback.className = "good";
+        } else {
+          lives -= 1;
+          feedback.textContent = "Not quite. " + fmt(chest.fr) + " is not equal to " + fmt(target) + ".";
+          feedback.className = "bad";
+        }
+        scoreEl.textContent = score;
+        livesEl.textContent = lives;
+        projectile = null;
+        if (lives <= 0) feedback.textContent += " Game over. Press Next Round to restart.";
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#e2e8f0";
+    stars.forEach(s => { ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); });
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#334155";
+    ctx.fillRect(0, 360, canvas.width, 60);
+    ctx.fillStyle = "#475569";
+    ctx.fillRect(20, 322, 130, 18);
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillRect(25, 318, 20, 26);
+  }
+
+  function drawCannon() {
+    const angle = Number(angleInput.value) * Math.PI / 180;
+    ctx.save();
+    ctx.translate(85, 315);
+    ctx.rotate(-angle);
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillRect(0, -6, 56, 12);
+    ctx.restore();
+    ctx.fillStyle = "#94a3b8";
+    ctx.beginPath();
+    ctx.arc(85, 315, 18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawChests() {
+    ctx.font = "20px Arial";
+    chests.forEach(ch => {
+      ctx.fillStyle = "#92400e";
+      ctx.fillRect(ch.x, ch.y, ch.w, ch.h);
+      ctx.fillStyle = "#fbbf24";
+      ctx.fillRect(ch.x, ch.y + 20, ch.w, 10);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(fmt(ch.fr), ch.x + 10, ch.y - 12);
+    });
+  }
+
+  function drawProjectile() {
+    if (!projectile) return;
+    ctx.fillStyle = "#22d3ee";
+    ctx.beginPath();
+    ctx.arc(projectile.x, projectile.y, projectile.r, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function update() {
+    if (projectile) {
+      projectile.x += projectile.vx;
+      projectile.y += projectile.vy;
+      projectile.vy += g;
+      checkHit();
+      if (projectile && (projectile.x > canvas.width || projectile.y > canvas.height || projectile.y < 0)) {
+        projectile = null;
+        if (lives > 0) {
+          lives -= 1;
+          livesEl.textContent = lives;
+          feedback.textContent = "Missed. Try again or press Next Round.";
+          feedback.className = "bad";
+        }
+      }
+    }
+  }
+
+  function loop() {
+    drawBackground();
+    drawCannon();
+    drawChests();
+    update();
+    drawProjectile();
+    requestAnimationFrame(loop);
+  }
+
+  angleInput.addEventListener('input', () => angleVal.textContent = angleInput.value + "°");
+  powerInput.addEventListener('input', () => powerVal.textContent = powerInput.value);
+  fireBtn.addEventListener('click', shoot);
+  nextBtn.addEventListener('click', () => {
+    if (lives <= 0) { score = 0; lives = 3; round = 1; scoreEl.textContent = score; livesEl.textContent = lives; }
+    else { round += 1; }
+    setupRound();
+  });
+
+  setupRound();
+  angleVal.textContent = angleInput.value + "°";
+  powerVal.textContent = powerInput.value;
+  loop();
+})();
+</script>
+</body>
+</html>
