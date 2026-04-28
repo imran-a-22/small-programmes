@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Angle Archer</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #111827;
+    --card: #1f2937;
+    --text: #f8fafc;
+    --muted: #cbd5e1;
+    --accent: #38bdf8;
+    --good: #22c55e;
+    --bad: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: Arial, sans-serif; background: linear-gradient(180deg, #020617, var(--bg));
+    color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .game {
+    width: min(960px, 100%); background: rgba(17, 24, 39, 0.96); border: 1px solid #334155; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  }
+  .top { padding: 18px 22px; border-bottom: 1px solid #334155; display: grid; gap: 8px; }
+  .title { display:flex; justify-content: space-between; align-items: center; gap:12px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 1.6rem; }
+  .stats { display:flex; gap:14px; flex-wrap: wrap; color: var(--muted); font-size: 0.95rem; }
+  .arena { display:grid; grid-template-columns: 1.4fr 1fr; gap: 20px; padding: 22px; }
+  .left, .right { background: var(--card); border-radius: 16px; padding: 18px; }
+  canvas { width: 100%; height: auto; background: #0b1220; border-radius: 12px; border:1px solid #334155; }
+  .prompt { margin: 16px 0 8px; font-size: 1rem; color: var(--muted); }
+  .degree { font-size: 2rem; font-weight: bold; color: var(--accent); margin-bottom: 8px; }
+  .choices { display:grid; gap: 10px; }
+  button {
+    border: none; border-radius: 12px; padding: 13px 14px; font-size: 1rem; cursor: pointer;
+    background: #334155; color: white; transition: transform 0.1s ease, background 0.2s ease;
+  }
+  button:hover { transform: translateY(-1px); background: #475569; }
+  .feedback { min-height: 52px; margin-top: 12px; padding: 12px; border-radius: 12px; background: #0b1220; color: var(--muted); }
+  .correct { color: #86efac; }
+  .wrong { color: #fca5a5; }
+  .controls { display:flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .secondary { background: #0ea5e9; }
+  .secondary:hover { background: #0284c7; }
+  .small { font-size: 0.92rem; color: var(--muted); line-height: 1.5; }
+  @media (max-width: 760px) { .arena { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <div class="game">
+    <div class="top">
+      <div class="title">
+        <h1>Angle Archer</h1>
+        <div class="stats">
+          <div>Score: <strong id="score">0</strong></div>
+          <div>Lives: <strong id="lives">3</strong></div>
+          <div>Round: <strong id="round">1</strong>/12</div>
+        </div>
+      </div>
+      <div class="small">Study acute, right, obtuse and straight angles. Look at the angle, read the degree, and pick the correct type.</div>
+    </div>
+    <div class="arena">
+      <div class="left">
+        <canvas id="angleCanvas" width="520" height="360"></canvas>
+        <div class="prompt">Target angle:</div>
+        <div class="degree" id="degreeText">0°</div>
+      </div>
+      <div class="right">
+        <div class="choices">
+          <button data-choice="Acute">Acute (less than 90°)</button>
+          <button data-choice="Right">Right (exactly 90°)</button>
+          <button data-choice="Obtuse">Obtuse (between 90° and 180°)</button>
+          <button data-choice="Straight">Straight (exactly 180°)</button>
+        </div>
+        <div class="feedback" id="feedback">Choose the correct angle type to shoot the target.</div>
+        <div class="controls">
+          <button class="secondary" id="restartBtn">Restart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+const canvas = document.getElementById('angleCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+const roundEl = document.getElementById('round');
+const degreeText = document.getElementById('degreeText');
+const feedback = document.getElementById('feedback');
+const buttons = [...document.querySelectorAll('[data-choice]')];
+const restartBtn = document.getElementById('restartBtn');
+
+const rounds = [25, 90, 140, 180, 70, 115, 90, 35, 160, 180, 50, 100];
+let score = 0;
+let lives = 3;
+let roundIndex = 0;
+let currentAngle = rounds[0];
+let locked = false;
+
+function classify(angle) {
+  if (angle < 90) return 'Acute';
+  if (angle === 90) return 'Right';
+  if (angle < 180) return 'Obtuse';
+  return 'Straight';
+}
+
+function drawAngle(angle) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#08111d';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let x = 0; x <= canvas.width; x += 40) {
+    ctx.strokeStyle = 'rgba(148,163,184,0.12)';
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y <= canvas.height; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+
+  const ox = 130, oy = 260, len = 150;
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = '#38bdf8';
+  ctx.beginPath();
+  ctx.moveTo(ox, oy);
+  ctx.lineTo(ox + len, oy);
+  ctx.stroke();
+
+  const rad = (-angle * Math.PI) / 180;
+  const x2 = ox + Math.cos(rad) * len;
+  const y2 = oy + Math.sin(rad) * len;
+  ctx.strokeStyle = '#f59e0b';
+  ctx.beginPath();
+  ctx.moveTo(ox, oy);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = '#94a3b8';
+  ctx.arc(ox, oy, 55, 0, rad, true);
+  ctx.stroke();
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '20px Arial';
+  ctx.fillText(angle + '°', ox + 20, oy - 20);
+
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.arc(430, 90, 28, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#052e16';
+  ctx.font = 'bold 16px Arial';
+  ctx.fillText('Target', 402, 140);
+
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(55, 95);
+  ctx.lineTo(100, 95);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(90, 85);
+  ctx.lineTo(100, 95);
+  ctx.lineTo(90, 105);
+  ctx.stroke();
+  ctx.fillStyle = '#fca5a5';
+  ctx.fillText('Arrow of knowledge', 25, 70);
+}
+
+function loadRound() {
+  currentAngle = rounds[roundIndex];
+  degreeText.textContent = currentAngle + '°';
+  roundEl.textContent = roundIndex + 1;
+  drawAngle(currentAngle);
+}
+
+function updateStats() {
+  scoreEl.textContent = score;
+  livesEl.textContent = lives;
+}
+
+function finishGame() {
+  locked = true;
+  buttons.forEach(btn => btn.disabled = true);
+  feedback.innerHTML = `Game over. Final score: <strong>${score}</strong>. Press restart to play again.`;
+}
+
+function nextRound() {
+  roundIndex += 1;
+  if (lives <= 0 || roundIndex >= rounds.length) {
+    finishGame();
+    return;
+  }
+  loadRound();
+}
+
+buttons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (locked) return;
+    const choice = btn.dataset.choice;
+    const correct = classify(currentAngle);
+    if (choice === correct) {
+      score += 10;
+      feedback.innerHTML = `<span class="correct">Correct.</span> ${currentAngle}° is a <strong>${correct.toLowerCase()}</strong> angle.`;
+    } else {
+      lives -= 1;
+      feedback.innerHTML = `<span class="wrong">Not quite.</span> ${currentAngle}° is <strong>${correct.toLowerCase()}</strong>, not ${choice.toLowerCase()}.`;
+    }
+    updateStats();
+    setTimeout(nextRound, 900);
+  });
+});
+
+restartBtn.addEventListener('click', () => {
+  score = 0; lives = 3; roundIndex = 0; locked = false;
+  buttons.forEach(btn => btn.disabled = false);
+  feedback.textContent = 'Choose the correct angle type to shoot the target.';
+  updateStats();
+  loadRound();
+});
+
+updateStats();
+loadRound();
+</script>
+</body>
+</html>
