@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ecosystem Rescue</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#082f49;color:#e0f2fe;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.wrap{width:min(980px,96vw);background:#0f172a;border-radius:18px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+h1,p{text-align:center;margin:8px 0}.hud{display:flex;justify-content:space-around;gap:10px;flex-wrap:wrap;margin-bottom:12px}.card{background:#164e63;padding:10px 14px;border-radius:12px;font-weight:700}
+.scenario{background:#155e75;padding:14px;border-radius:14px;margin:14px 0;color:#ecfeff}
+.options{display:grid;grid-template-columns:1fr 1fr;gap:12px}.opt{background:#cffafe;color:#083344;border:none;padding:14px;border-radius:12px;font-weight:700;cursor:pointer}
+#barBox{margin-top:14px}.barRow{margin:10px 0}.bar{height:18px;background:#334155;border-radius:999px;overflow:hidden}.fill{height:100%;background:#22c55e;width:60%}
+#msg{text-align:center;margin-top:12px;color:#bae6fd}
+button.restart{display:block;margin:16px auto 0;padding:10px 18px;border:none;border-radius:10px;background:#38bdf8;color:#082f49;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ecosystem Rescue</h1>
+  <p>Choose actions that protect balance in a living ecosystem.</p>
+  <div class="hud">
+    <div class="card">Score: <span id="score">0</span></div>
+    <div class="card">Round: <span id="round">1</span>/6</div>
+    <div class="card">Health: <span id="healthText">60</span>%</div>
+  </div>
+  <div class="scenario" id="scenario"></div>
+  <div class="options">
+    <button class="opt" id="optA"></button>
+    <button class="opt" id="optB"></button>
+  </div>
+  <div id="barBox">
+    <div class="barRow">Ecosystem health<div class="bar"><div class="fill" id="healthFill"></div></div></div>
+  </div>
+  <div id="msg">Think about food chains, habitats, and pollution.</div>
+  <button class="restart" id="restart">Restart</button>
+</div>
+<script>
+const rounds=[
+  {q:'A wetland near the town is full of birds, frogs, and insects. The council wants to change it. What helps biodiversity more?',a:'Protect part of the wetland and build around it',b:'Drain the wetland for more parking spaces',good:'a'},
+  {q:'A river has litter and oily waste near factories. What is the better action?',a:'Add water treatment and stricter waste rules',b:'Ignore it because the river still flows',good:'a'},
+  {q:'A forest has too many deer because predators disappeared. What helps balance?',a:'Restore predators or manage deer numbers carefully',b:'Let the deer population grow without limit',good:'a'},
+  {q:'Farmers want higher yields. Which practice is better for pollinators?',a:'Plant wildflower strips beside fields',b:'Remove all hedges and wild plants',good:'a'},
+  {q:'A beach has more plastic each month. What helps most?',a:'Reduce single-use plastic and organise clean-ups',b:'Leave the plastic because tides will move it away',good:'a'},
+  {q:'A lake is turning green from algae blooms. What should be reduced?',a:'Fertiliser runoff entering the water',b:'Shade from trees near the lake',good:'a'}
+];
+let index=0, score=0, health=60;
+const scenario=document.getElementById('scenario'), optA=document.getElementById('optA'), optB=document.getElementById('optB'), scoreEl=document.getElementById('score'), roundEl=document.getElementById('round'), healthText=document.getElementById('healthText'), fill=document.getElementById('healthFill'), msg=document.getElementById('msg');
+function render(){ if(index>=rounds.length){scenario.textContent='Finished. Restart to play again.'; optA.disabled=true; optB.disabled=true; msg.textContent=`Final score ${score}. Healthy ecosystems need balance, clean resources, and habitat protection.`; return;} const r=rounds[index]; scenario.textContent=r.q; optA.textContent=r.a; optB.textContent=r.b; roundEl.textContent=index+1; scoreEl.textContent=score; healthText.textContent=health; fill.style.width=health+'%'; }
+function choose(letter){ if(index>=rounds.length) return; const r=rounds[index]; if(letter===r.good){score+=10; health=Math.min(100,health+8); msg.textContent='Good choice. That action supports ecosystem balance.';} else {health=Math.max(0,health-12); msg.textContent='Poor choice. That harms habitats or food webs.';} index++; render(); }
+function start(){index=0;score=0;health=60;optA.disabled=false;optB.disabled=false;msg.textContent='Think about food chains, habitats, and pollution.';render();}
+optA.onclick=()=>choose('a'); optB.onclick=()=>choose('b'); document.getElementById('restart').onclick=start; start();
+</script>
+</body>
+</html>
