@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Data Chart Detective</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.game{width:min(1000px,100%);background:rgba(0,0,0,.42);border-radius:24px;padding:24px;box-shadow:0 22px 60px rgba(0,0,0,.4)}h1{margin:0 0 8px;font-size:36px}.intro{color:#dbeafe;line-height:1.5}.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}.stat{background:rgba(255,255,255,.12);border-radius:14px;padding:12px;text-align:center}.stat strong{display:block;font-size:24px;color:#fde047}.layout{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.chartbox{background:white;color:#111827;border-radius:18px;padding:18px}.chart{height:320px;display:flex;align-items:end;gap:18px;border-left:4px solid #111827;border-bottom:4px solid #111827;padding:20px 15px 0;margin-top:15px}.barWrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%}.bar{width:70%;background:#2563eb;border-radius:10px 10px 0 0;display:flex;align-items:flex-start;justify-content:center;color:white;font-weight:900;padding-top:8px}.label{font-weight:900;margin-top:8px}.panel{background:rgba(255,255,255,.12);border-radius:18px;padding:18px}.choices{display:grid;gap:10px;margin-top:12px}button{border:0;border-radius:14px;padding:13px;font-weight:900;cursor:pointer;background:#fde047;color:#111827}button:hover{transform:translateY(-1px)}.green{background:#22c55e}.red{background:#ef4444;color:white}.feedback{background:rgba(0,0,0,.28);border-radius:14px;padding:14px;min-height:80px;margin-top:12px;line-height:1.5}.lesson{margin-top:16px;background:rgba(255,255,255,.10);border-radius:14px;padding:14px;line-height:1.5}@media(max-width:800px){.layout{grid-template-columns:1fr}.hud{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="game"><h1>Data Chart Detective</h1><p class="intro">Read the bar chart carefully and solve the data question. This trains comparison, difference, total, and evidence-based reasoning.</p>
+<div class="hud"><div class="stat">Score<strong id="score">0</strong></div><div class="stat">Clues<strong id="clues">3</strong></div><div class="stat">Case<strong id="caseNo">1</strong></div><div class="stat">Rank<strong id="rank">Trainee</strong></div></div>
+<div class="layout"><div class="chartbox"><h2 id="chartTitle"></h2><div class="chart" id="chart"></div></div><div class="panel"><h2 id="question"></h2><div class="choices" id="choices"></div><div class="feedback" id="feedback">Choose the best answer.</div><button class="green" onclick="nextCase()">Next Case</button><button class="red" onclick="resetGame()">Reset</button></div></div>
+<div class="lesson"><strong>Mini lesson:</strong> A bar chart compares categories. Check the title, labels, and values before answering. Difference means subtract. Total means add.</div></div>
+<script>
+const cases=[
+{title:"Books Read This Week",data:{Ali:4,Lena:7,Sam:3,Mina:6},q:"Who read the most books?",ans:"Lena",choices:["Ali","Lena","Sam","Mina"],ex:"Lena has the tallest bar with 7 books."},
+{title:"Game Points",data:{Red:12,Blue:18,Green:9,Gold:15},q:"How many more points did Blue score than Green?",ans:"9",choices:["6","9","12","27"],ex:"18 - 9 = 9."},
+{title:"Fruit Sold",data:{Apples:8,Bananas:5,Grapes:7,Oranges:10},q:"What is the total sold for Apples and Bananas?",ans:"13",choices:["10","13","15","18"],ex:"Apples 8 + Bananas 5 = 13."},
+{title:"Quiz Scores",data:{Math:80,Science:90,History:70,English:85},q:"Which subject scored exactly 85?",ans:"English",choices:["Math","Science","History","English"],ex:"The English bar is labelled 85."},
+{title:"Visitors by Day",data:{Mon:20,Tue:35,Wed:25,Thu:40},q:"Which day had the fewest visitors?",ans:"Mon",choices:["Mon","Tue","Wed","Thu"],ex:"Monday has the smallest value: 20."}
+];
+let s=0,c=3,i=0,answered=false;
+function draw(){const item=cases[i%cases.length];chartTitle.textContent=item.title;chart.innerHTML='';const max=Math.max(...Object.values(item.data));Object.entries(item.data).forEach(([k,v])=>{let w=document.createElement('div');w.className='barWrap';let b=document.createElement('div');b.className='bar';b.style.height=(v/max*88)+'%';b.textContent=v;let l=document.createElement('div');l.className='label';l.textContent=k;w.appendChild(b);w.appendChild(l);chart.appendChild(w);});}
+function render(){answered=false;const item=cases[i%cases.length];draw();question.textContent=item.q;score.textContent=s;clues.textContent=c;caseNo.textContent=i%cases.length+1;rank.textContent=s>=40?'Senior Analyst':s>=20?'Detective':'Trainee';feedback.textContent='Use the chart, then choose.';choices.innerHTML='';item.choices.forEach(x=>{let b=document.createElement('button');b.textContent=x;b.onclick=()=>choose(x);choices.appendChild(b);});}
+function choose(x){if(answered||c<=0)return;answered=true;const item=cases[i%cases.length];if(x===item.ans){s+=10;feedback.innerHTML='<strong>Correct.</strong> '+item.ex;}else{c--;feedback.innerHTML='<strong>Incorrect.</strong> Correct answer: '+item.ans+'. '+item.ex;}score.textContent=s;clues.textContent=c;if(c<=0)feedback.innerHTML+='<br><strong>No clues left.</strong> Reset to try again.';}
+function nextCase(){if(c<=0)return;i++;render();}
+function resetGame(){s=0;c=3;i=0;render();}
+render();
+</script>
+</body>
+</html>
