@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Circuit Current Builder</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101522;color:#e8f2ff;font-family:Verdana,Arial,sans-serif;min-height:100vh}.app{max-width:1150px;margin:auto;padding:24px}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}.badge{background:#152f4f;border:1px solid #59c3ff;border-radius:999px;padding:8px 12px}.grid{display:grid;grid-template-columns:1fr 370px;gap:18px;margin-top:18px}.board{background:linear-gradient(145deg,#18243a,#0e1421);border:2px solid #59c3ff;border-radius:24px;padding:18px;box-shadow:0 0 30px rgba(89,195,255,.18)}h1{font-size:clamp(30px,5vw,54px);margin:0;color:#84e3ff}.mission{font-size:18px;color:#b7d7ff}.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.chip{border:1px solid #80f7d2;background:#0f2330;color:white;border-radius:14px;padding:12px;cursor:pointer}.chip:hover{box-shadow:0 0 15px #80f7d2}.selected{background:#174d42}.circuit{margin:20px auto;max-width:700px}.readout{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.meter{background:#050a12;border:1px solid #344b69;border-radius:16px;padding:12px;text-align:center}.meter b{display:block;font-size:25px;color:#ffd166}.parts{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.part{background:#243b5d;border:1px solid #5d82bd;border-radius:10px;padding:8px 10px}.btn{background:#ffd166;color:#101522;border:0;border-radius:14px;padding:12px 16px;font-weight:bold;cursor:pointer;margin:5px}.btn.secondary{background:#59c3ff}.btn.danger{background:#ef476f;color:white}.spark{animation:pulse 1s infinite alternate}@keyframes pulse{from{filter:drop-shadow(0 0 2px #ffd166)}to{filter:drop-shadow(0 0 16px #ffd166)}}.log{background:#050a12;border:1px solid #33465f;border-radius:16px;padding:12px;height:180px;overflow:auto;color:#c8ddff;font-family:Consolas,monospace}.formula{background:#07111e;border-left:5px solid #ffd166;padding:12px;border-radius:12px}.warn{color:#ff9bb0}@media(max-width:850px){.grid{grid-template-columns:1fr}.controls,.readout{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top"><div><h1>Circuit Current Builder</h1><p class="mission" id="mission"></p></div><div class="badge">Score: <b id="score">0</b> | Mission <b id="level">1</b>/6</div></div>
+  <div class="grid">
+    <main class="board">
+      <div class="controls" id="controls"></div>
+      <div class="parts" id="parts"></div>
+      <svg class="circuit" viewBox="0 0 720 300" role="img" aria-label="simple circuit diagram">
+        <rect x="40" y="55" width="640" height="190" rx="30" fill="none" stroke="#59c3ff" stroke-width="10"/>
+        <line x1="82" y1="92" x2="82" y2="208" stroke="#ffd166" stroke-width="8"/><line x1="102" y1="120" x2="102" y2="180" stroke="#ffd166" stroke-width="8"/>
+        <text x="45" y="40" fill="#ffd166" font-size="22" id="batteryLabel">Battery</text>
+        <g id="resistorGroup"></g>
+        <circle cx="610" cy="150" r="42" fill="#07111e" stroke="#ffd166" stroke-width="8"/><path id="bulbGlow" d="M590 150 Q610 118 630 150 Q610 182 590 150" fill="none" stroke="#ffd166" stroke-width="5"/>
+        <text x="570" y="230" fill="#e8f2ff" font-size="20">lamp</text>
+      </svg>
+      <div class="readout">
+        <div class="meter"><span>Voltage</span><b id="v">0V</b></div><div class="meter"><span>Resistance</span><b id="r">0Ω</b></div><div class="meter"><span>Current</span><b id="i">0A</b></div><div class="meter"><span>Error</span><b id="err">--</b></div>
+      </div>
+      <button class="btn" onclick="submitCircuit()">Test circuit</button><button class="btn secondary" onclick="clearCircuit()">Clear resistors</button><button class="btn danger" onclick="restart()">Restart</button>
+    </main>
+    <aside class="board">
+      <h2>Ohm's Law Lab</h2>
+      <p class="formula"><b>Formula:</b> Current = Voltage ÷ Resistance. In symbols: I = V / R.</p>
+      <p>Add resistors in series. More resistance lowers current. Your goal is to hit the target current without overheating the lamp.</p>
+      <h3>Feedback log</h3><div class="log" id="log"></div>
+    </aside>
+  </div>
+</div>
+<script>
+const missions=[{v:9,target:.5},{v:12,target:.75},{v:6,target:.3},{v:18,target:1},{v:24,target:.8},{v:15,target:.6}];
+const resistorOptions=[3,6,9,12,15,18,24,30,36,48];let level,score,voltage,resistors;
+function restart(){level=0;score=0;loadMission();write('Welcome engineer. Build safe circuits by controlling current.');}
+function loadMission(){voltage=missions[level].v;resistors=[];render();}
+function write(t){const l=document.getElementById('log');l.innerHTML='⚡ '+t+'<br>'+l.innerHTML;}
+function totalR(){return resistors.reduce((a,b)=>a+b,0)}function current(){return totalR()?voltage/totalR():0}
+function addR(x){resistors.push(x);write('Added '+x+'Ω resistor in series.');render();}
+function clearCircuit(){resistors=[];write('Circuit cleared.');render();}
+function submitCircuit(){const target=missions[level].target;const c=current();if(!totalR()){write('No resistance means a dangerous short circuit. Add resistors.');return;}const diff=Math.abs(c-target);if(c>1.5){score=Math.max(0,score-20);write('Overheated lamp. Current is too high. Add more resistance.');}
+else if(diff<.04){score+=120;write('Excellent: current matched the mission target.');next();}
+else if(diff<.12){score+=60;write('Close enough: working circuit, but improve precision next time.');next();}
+else{score+=10;write(c<target?'Too little current: remove resistance or raise voltage.':'Too much current: add resistance.');}
+render();}
+function next(){level++;if(level>=missions.length){write('All missions complete. Final score: '+score+'.');level=missions.length-1;}else loadMission();}
+function render(){document.getElementById('score').textContent=score;document.getElementById('level').textContent=Math.min(level+1,missions.length);const m=missions[level];document.getElementById('mission').textContent='Target: build a '+m.v+'V circuit with about '+m.target.toFixed(2)+'A current.';document.getElementById('batteryLabel').textContent=m.v+'V battery';document.getElementById('v').textContent=voltage+'V';document.getElementById('r').textContent=totalR()+'Ω';document.getElementById('i').textContent=current().toFixed(2)+'A';document.getElementById('err').textContent=totalR()?Math.abs(current()-m.target).toFixed(2):'--';document.getElementById('controls').innerHTML=resistorOptions.map(x=>`<button class="chip" onclick="addR(${x})">+ ${x}Ω</button>`).join('');document.getElementById('parts').innerHTML=resistors.length?resistors.map((r,idx)=>`<span class="part">R${idx+1}: ${r}Ω</span>`).join(''):'<span class="part">No resistors added</span>';const g=document.getElementById('resistorGroup');let x=190;g.innerHTML=resistors.slice(0,5).map((r,k)=>`<polyline points="${x+k*62},150 ${x+10+k*62},130 ${x+25+k*62},170 ${x+40+k*62},130 ${x+55+k*62},150" fill="none" stroke="#80f7d2" stroke-width="7"/><text x="${x-2+k*62}" y="115" fill="#e8f2ff" font-size="15">${r}Ω</text>`).join('');document.getElementById('bulbGlow').setAttribute('class',current()>0&&current()<1.5?'spark':'');}
+restart();
+</script>
+</body>
+</html>
