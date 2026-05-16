@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Budget Survival Simulator</title>
+<style>
+  :root{--ink:#15202b;--paper:#fff8ea;--accent:#0c7c59;--warn:#d97904;--bad:#c0392b;--soft:#f2dfb7;--card:#fffaf0;}
+  *{box-sizing:border-box} body{margin:0;font-family:Trebuchet MS,Arial,sans-serif;background:radial-gradient(circle at top left,#fff6d5,#dcebd8 52%,#b8d8c1);color:var(--ink);min-height:100vh;}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px}.hero{display:grid;grid-template-columns:1.3fr .7fr;gap:18px;align-items:stretch}.panel{background:rgba(255,250,240,.92);border:3px solid #2d4739;border-radius:24px;box-shadow:8px 8px 0 #2d4739;padding:20px}.title{font-size:clamp(32px,5vw,58px);line-height:.95;margin:0 0 8px}.tag{font-weight:bold;color:#3f5e4b}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}.stat{background:#fff;border:2px solid #2d4739;border-radius:16px;padding:12px;text-align:center}.stat b{display:block;font-size:24px}.bar{height:14px;background:#f1d9b6;border:2px solid #2d4739;border-radius:20px;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,#38a169,#ffd166,#ef476f)}.market{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}.choice{border:2px solid #2d4739;border-radius:18px;background:#fff;cursor:pointer;padding:14px;text-align:left;transition:.15s;min-height:140px}.choice:hover{transform:translateY(-3px);box-shadow:5px 5px 0 #2d4739}.choice h3{margin:0 0 8px}.choice small{display:block;margin-top:8px;color:#516052}.log{height:190px;overflow:auto;background:#243629;color:#f9f4e8;border-radius:18px;border:3px solid #142119;padding:14px;font-family:Consolas,monospace;font-size:14px}.quiz{margin-top:16px;background:#fff;border:2px dashed #2d4739;border-radius:18px;padding:14px}.quiz button,.primary{border:0;border-radius:12px;background:#0c7c59;color:white;font-weight:bold;padding:10px 14px;margin:5px;cursor:pointer}.quiz button:hover,.primary:hover{filter:brightness(1.1)}.danger{background:#c0392b}.ledger{display:grid;gap:8px}.coin{display:inline-block;background:#f6c453;border:2px solid #7a5b00;border-radius:50%;width:34px;height:34px;text-align:center;line-height:30px;font-weight:bold}footer{margin-top:18px;font-size:13px;color:#385144}@media(max-width:800px){.hero,.market{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <div class="panel">
+      <h1 class="title">Budget Survival Simulator</h1>
+      <p class="tag">Survive 6 weeks by choosing smart spending, saving, and emergency decisions.</p>
+      <div class="stats">
+        <div class="stat"><span>Week</span><b id="week">1/6</b></div>
+        <div class="stat"><span>Cash</span><b id="cash">£220</b></div>
+        <div class="stat"><span>Food</span><b id="food">55</b></div>
+        <div class="stat"><span>Score</span><b id="score">0</b></div>
+      </div>
+      <div><b>Stress level</b><div class="bar"><div class="fill" id="stressFill"></div></div></div>
+      <div class="market" id="choices"></div>
+      <div class="quiz" id="quizBox"></div>
+    </div>
+    <aside class="panel">
+      <h2><span class="coin">£</span> Your survival ledger</h2>
+      <div class="ledger">
+        <p><b>Goal:</b> reach week 6 with cash above £0, food above 0, and stress below 100.</p>
+        <p><b>Rule:</b> every week costs £45 rent/utilities and 12 food.</p>
+        <p><b>Lesson:</b> a budget is a plan for scarce resources, not just a list of expenses.</p>
+      </div>
+      <h3>Event log</h3>
+      <div class="log" id="log"></div>
+      <button class="primary" onclick="restart()">Restart game</button>
+    </aside>
+  </section>
+  <footer>Standalone HTML5 file: no images, no libraries, no server.</footer>
+</div>
+<script>
+const actions=[
+ {name:'Cook at home',cash:-24,food:30,stress:-5,tip:'Bulk cooking costs cash now but gives many meals.'},
+ {name:'Take a side job',cash:85,food:-8,stress:18,tip:'More income helps, but overwork increases stress.'},
+ {name:'Buy convenience meals',cash:-48,food:24,stress:-12,tip:'Convenience reduces effort but burns money faster.'},
+ {name:'Delay a bill',cash:20,food:0,stress:26,tip:'Delaying bills can create short-term cash and long-term pressure.'},
+ {name:'Use a discount shop',cash:-16,food:18,stress:2,tip:'Comparison shopping stretches your budget.'},
+ {name:'Sell unused item',cash:55,food:0,stress:-2,tip:'Selling idle assets can create one-off emergency cash.'}
+];
+const quizzes=[
+ {q:'You earn £300 and must pay £120 rent. What is left before other spending?',a:['£180','£220','£420'],c:0},
+ {q:'Which should usually be funded before entertainment?',a:['Emergency savings','A luxury upgrade','Random impulse buys'],c:0},
+ {q:'If food costs rise, what protects you most?',a:['A planned grocery list','Ignoring prices','Buying only snacks'],c:0},
+ {q:'A fixed cost is...',a:['A cost that stays similar each period','A cost that changes every minute','A surprise gift'],c:0},
+ {q:'Best response to an emergency repair?',a:['Use emergency fund if possible','Miss all bills without checking','Borrow without comparing'],c:0},
+ {q:'A budget surplus means...',a:['Income is higher than expenses','Expenses are higher than income','You have no money'],c:0}
+];
+let state;
+function restart(){state={week:1,cash:220,food:55,stress:22,score:0,answered:false,gameOver:false};log('New month started. Keep your cash, food, and stress under control.');render();}
+function fmt(n){return n<0?'-£'+Math.abs(n):'£'+n}
+function log(t){const el=document.getElementById('log');el.innerHTML='› '+t+'<br>'+el.innerHTML;}
+function weeklyCost(){state.cash-=45;state.food-=12;state.stress+=8;log('Weekly essentials paid: -£45 and -12 food.');}
+function choose(i){if(state.gameOver)return;const a=actions[i];state.cash+=a.cash;state.food+=a.food;state.stress=Math.max(0,state.stress+a.stress);state.score+=Math.max(0,20-Math.abs(a.stress));log(a.name+': '+(a.cash>=0?'+':'')+fmt(a.cash).replace('£-','-£')+', food '+(a.food>=0?'+':'')+a.food+', stress '+(a.stress>=0?'+':'')+a.stress+'. '+a.tip);askQuiz();render();}
+function askQuiz(){state.answered=false;const q=quizzes[state.week-1];const box=document.getElementById('quizBox');box.innerHTML='<b>Budget check:</b> '+q.q+'<br>'+q.a.map((x,i)=>`<button onclick="answer(${i})">${x}</button>`).join('');}
+function answer(i){if(state.answered||state.gameOver)return;state.answered=true;const q=quizzes[state.week-1];if(i===q.c){state.score+=35;state.stress=Math.max(0,state.stress-8);log('Correct budget answer: +35 score and lower stress.');}else{state.stress+=15;state.score=Math.max(0,state.score-8);log('Wrong answer. Stress increased. Correct answer: '+q.a[q.c]+'.');}
+weeklyCost();if(state.cash<0||state.food<0||state.stress>=100){state.gameOver=true;log('Game over: the budget collapsed. Restart and rebalance income, needs, and stress.');}
+else if(state.week>=6){state.gameOver=true;state.score+=state.cash+state.food*2+(100-state.stress);log('You survived 6 weeks. Final survival score: '+state.score+'.');}
+else{state.week++;log('Week '+state.week+' begins. Choose your next move.');}
+render();}
+function render(){document.getElementById('week').textContent=Math.min(state.week,6)+'/6';document.getElementById('cash').textContent='£'+state.cash;document.getElementById('food').textContent=state.food;document.getElementById('score').textContent=state.score;document.getElementById('stressFill').style.width=Math.min(100,state.stress)+'%';const pool=[...actions].sort(()=>Math.random()-.5).slice(0,3);document.getElementById('choices').innerHTML=state.gameOver?'<button class="choice" onclick="restart()"><h3>Play again</h3><p>Try a different budget strategy.</p></button>':pool.map((a,idx)=>`<button class="choice" onclick="choose(${actions.indexOf(a)})"><h3>${a.name}</h3><p>Cash: ${a.cash>=0?'+':''}£${a.cash} | Food: ${a.food>=0?'+':''}${a.food} | Stress: ${a.stress>=0?'+':''}${a.stress}</p><small>${a.tip}</small></button>`).join('');if(state.gameOver)document.getElementById('quizBox').innerHTML='<b>Reflection:</b> Strong budgets balance fixed costs, variable costs, emergency buffers, and personal energy.';}
+restart();
+</script>
+</body>
+</html>
