@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Grammar Tense Time Machine</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(120deg,#2b1055,#7597de);font-family:Georgia,'Times New Roman',serif;color:#fff}.machine{max-width:1050px;margin:auto;padding:26px}.frame{border:5px solid #f6d365;border-radius:35px;background:rgba(13,17,45,.82);box-shadow:0 20px 70px rgba(0,0,0,.45),inset 0 0 25px rgba(246,211,101,.2);padding:24px}.top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}h1{font-size:clamp(31px,5vw,58px);margin:0;text-shadow:3px 3px #000}.dial{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0}.zone{border:2px solid #f6d365;border-radius:22px;padding:16px;text-align:center;background:rgba(255,255,255,.08)}.active{background:#f6d365;color:#2b1055}.sentence{font-size:clamp(24px,4vw,42px);line-height:1.25;background:#fff;color:#1d2144;border-radius:24px;padding:24px;margin:18px 0;min-height:135px}.answers{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.answers button{border:0;border-radius:18px;padding:17px;background:#fffbeb;color:#2b1055;font-size:18px;font-weight:bold;cursor:pointer;box-shadow:0 6px 0 #a56b00}.answers button:hover{transform:translateY(-2px)}.hud{display:flex;gap:10px;flex-wrap:wrap}.pill{background:#0b102d;border:1px solid #f6d365;border-radius:999px;padding:9px 14px}.timeline{height:18px;background:#0b102d;border:2px solid #f6d365;border-radius:20px;overflow:hidden;margin-top:12px}.progress{height:100%;background:linear-gradient(90deg,#ff9671,#f9f871,#90ee90);width:0}.feedback{font-size:18px;min-height:56px;background:rgba(255,255,255,.09);border-radius:18px;padding:14px;margin-top:16px}.btn{background:#f6d365;color:#2b1055;border:0;border-radius:14px;padding:12px 16px;font-weight:bold;cursor:pointer}@media(max-width:750px){.dial,.answers{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="machine"><div class="frame">
+  <div class="top"><h1>Grammar Tense Time Machine</h1><div class="hud"><span class="pill">Score: <b id="score">0</b></span><span class="pill">Energy: <b id="energy">100</b></span><span class="pill">Jump: <b id="jump">1</b>/10</span></div></div>
+  <p>Choose the correct verb tense to send the sentence to the right time zone.</p>
+  <div class="dial"><div class="zone" id="past">PAST</div><div class="zone" id="present">PRESENT</div><div class="zone" id="future">FUTURE</div></div>
+  <div class="timeline"><div class="progress" id="progress"></div></div>
+  <div class="sentence" id="sentence"></div>
+  <div class="answers" id="answers"></div>
+  <div class="feedback" id="feedback">Activate the first jump.</div>
+  <button class="btn" onclick="restart()">Restart mission</button>
+</div></div>
+<script>
+const data=[
+{zone:'past',s:'Yesterday, the scientist ___ the strange signal.',choices:['records','recorded','will record','is recording'],c:1,why:'Yesterday signals the past simple: recorded.'},
+{zone:'future',s:'Tomorrow, our team ___ the prototype.',choices:['tested','tests','will test','has tested'],c:2,why:'Tomorrow points to the future: will test.'},
+{zone:'present',s:'Every morning, the train ___ at seven.',choices:['arrives','arrived','will arrive','arriving'],c:0,why:'Every morning is a routine, so use present simple: arrives.'},
+{zone:'past',s:'Last year, Maya ___ three poems for the contest.',choices:['writes','wrote','will write','write'],c:1,why:'Last year requires past simple: wrote.'},
+{zone:'present',s:'Right now, the engine ___ smoothly.',choices:['ran','will run','is running','runs yesterday'],c:2,why:'Right now shows present continuous: is running.'},
+{zone:'future',s:'Next week, they ___ a new lesson.',choices:['launched','launches','will launch','launching'],c:2,why:'Next week points forward: will launch.'},
+{zone:'past',s:'Before dinner, Sam ___ his homework.',choices:['finished','finishes','will finish','finish'],c:0,why:'A completed earlier action uses past simple: finished.'},
+{zone:'present',s:'Water ___ at 100°C under normal pressure.',choices:['boiled','boils','will boil','is boiled tomorrow'],c:1,why:'General facts use present simple: boils.'},
+{zone:'future',s:'If we practise today, we ___ faster tomorrow.',choices:['improved','improve','will improve','improves'],c:2,why:'Tomorrow makes the result future: will improve.'},
+{zone:'present',s:'Listen! The birds ___ outside.',choices:['sang','sing','are singing','will sing yesterday'],c:2,why:'Listen! shows an action happening now: are singing.'}
+];
+let index,score,energy,done;
+function restart(){index=0;score=0;energy=100;done=false;render();}
+function choose(i){if(done)return;const q=data[index];if(i===q.c){score+=100;energy=Math.min(100,energy+5);document.getElementById('feedback').innerHTML='Correct jump. '+q.why;}else{energy-=18;document.getElementById('feedback').innerHTML='Wrong tense. '+q.why;}index++;if(index>=data.length||energy<=0){done=true;document.getElementById('feedback').innerHTML+=(energy<=0?'<br>The machine ran out of energy.':'<br>Timeline complete. Final score: '+score+'.');}render();}
+function render(){document.getElementById('score').textContent=score;document.getElementById('energy').textContent=Math.max(0,energy);document.getElementById('jump').textContent=Math.min(index+1,data.length);document.getElementById('progress').style.width=(index/data.length*100)+'%';['past','present','future'].forEach(z=>document.getElementById(z).className='zone');if(!done){const q=data[index];document.getElementById(q.zone).className='zone active';document.getElementById('sentence').textContent=q.s;document.getElementById('answers').innerHTML=q.choices.map((x,i)=>`<button onclick="choose(${i})">${x}</button>`).join('');}else{document.getElementById('sentence').textContent=score>=700?'The timeline is stable. You mastered the tense mission.':'The timeline is shaky. Restart and watch the time clues.';document.getElementById('answers').innerHTML='<button onclick="restart()">Play again</button>';}}
+restart();
+</script>
+</body>
+</html>
